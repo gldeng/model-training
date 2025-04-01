@@ -8,7 +8,8 @@ from transformers import (
     DataCollatorForLanguageModeling,
     Trainer, 
     TrainingArguments,
-    set_seed
+    set_seed,
+    BertConfig
 )
 from datasets import load_dataset
 
@@ -23,6 +24,7 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--mlm_probability", type=float, default=0.15, help="MLM probability")
     parser.add_argument("--max_seq_length", type=int, default=128, help="Maximum sequence length")
+    parser.add_argument("--from_scratch", action="store_true", help="Train model from scratch instead of fine-tuning")
     return parser.parse_args()
 
 def main():
@@ -35,9 +37,29 @@ def main():
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     
-    # Load tokenizer and model
+    # Load tokenizer
     tokenizer = BertTokenizerFast.from_pretrained(args.model_name)
-    model = BertForMaskedLM.from_pretrained(args.model_name)
+
+    # Initialize model - either from scratch or pre-trained
+    if args.from_scratch:
+        # Create a configuration for the model
+        config = BertConfig(
+            vocab_size=tokenizer.vocab_size,
+            hidden_size=768,
+            num_hidden_layers=6,  # Reduced from 12 in BERT-base for faster training
+            num_attention_heads=8,
+            intermediate_size=2048,
+            max_position_embeddings=args.max_seq_length,
+            type_vocab_size=2,
+        )
+        
+        # Initialize a model with random weights
+        model = BertForMaskedLM(config)
+        print("Initializing model from scratch with random weights")
+    else:
+        # Load pre-trained model
+        model = BertForMaskedLM.from_pretrained(args.model_name)
+        print(f"Loading pre-trained model: {args.model_name}")
     
     # Load dataset
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1")

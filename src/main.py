@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument("--test_inference", action="store_true", help="Run inference test after training")
     parser.add_argument("--device", type=str, default=None, help="Device to run on (cuda or cpu)")
     parser.add_argument("--top_k", type=int, default=5, help="Top k predictions to show in inference")
+    parser.add_argument("--from_scratch", action="store_true", help="Train model from scratch instead of fine-tuning")
     return parser.parse_args()
 
 def run_command(cmd, description):
@@ -85,6 +86,10 @@ def main():
             f"--num_train_epochs={args.num_train_epochs}",
             f"--max_steps={args.max_steps}",
         ] + preprocess_train_args
+        
+        # Add from_scratch flag if specified
+        if args.from_scratch:
+            train_cmd.append("--from_scratch")
         
         if not run_command(train_cmd, "Model Training"):
             print("Exiting due to training failure.")
