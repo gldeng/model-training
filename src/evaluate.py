@@ -53,8 +53,19 @@ def main():
         
         test_dataset = tokenized_datasets["test"]
     
-    # Create dataloader
-    dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+    # Create dataloader with appropriate collate_fn
+    def collate_fn(examples):
+        return {
+            key: torch.tensor([example[key] for example in examples]) 
+            for key in examples[0].keys()
+        }
+    
+    dataloader = DataLoader(
+        test_dataset, 
+        batch_size=args.batch_size, 
+        shuffle=False,
+        collate_fn=collate_fn
+    )
     
     # Evaluate perplexity
     total_loss = 0

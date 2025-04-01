@@ -18,6 +18,7 @@ def parse_args():
     parser.add_argument("--skip_evaluation", action="store_true", help="Skip evaluation step")
     parser.add_argument("--test_inference", action="store_true", help="Run inference test after training")
     parser.add_argument("--device", type=str, default=None, help="Device to run on (cuda or cpu)")
+    parser.add_argument("--top_k", type=int, default=5, help="Top k predictions to show in inference")
     return parser.parse_args()
 
 def run_command(cmd, description):
@@ -50,21 +51,25 @@ def main():
         if not os.path.exists(directory):
             os.makedirs(directory)
     
-    # Build common command arguments
-    common_args = [
+    # Build common command arguments for preprocessing and training
+    preprocess_train_args = [
         f"--model_name={args.model_name}",
         f"--max_seq_length={args.max_seq_length}",
     ]
     
+    # Build common command arguments for evaluation and inference (these don't use model_name)
+    eval_inference_args = []
+    
     if args.device:
-        common_args.append(f"--device={args.device}")
+        preprocess_train_args.append(f"--device={args.device}")
+        eval_inference_args.append(f"--device={args.device}")
     
     # Step 1: Preprocess data
     if not args.skip_preprocessing:
         preprocess_cmd = [
             sys.executable, "src/preprocess.py",
             f"--output_dir={args.data_dir}",
-        ] + common_args
+        ] + preprocess_train_args
         
         if not run_command(preprocess_cmd, "Data Preprocessing"):
             print("Exiting due to preprocessing failure.")
@@ -79,7 +84,7 @@ def main():
             f"--learning_rate={args.learning_rate}",
             f"--num_train_epochs={args.num_train_epochs}",
             f"--max_steps={args.max_steps}",
-        ] + common_args
+        ] + preprocess_train_args
         
         if not run_command(train_cmd, "Model Training"):
             print("Exiting due to training failure.")
@@ -92,7 +97,7 @@ def main():
             f"--model_dir={args.output_dir}",
             f"--dataset_dir={os.path.join(args.data_dir, 'processed_wikitext2')}",
             f"--batch_size={args.batch_size}",
-        ] + common_args
+        ] + eval_inference_args
         
         if not run_command(eval_cmd, "Model Evaluation"):
             print("WARNING: Evaluation failed, but continuing with pipeline.")
@@ -104,7 +109,8 @@ def main():
             sys.executable, "src/inference.py",
             f"--model_dir={args.output_dir}",
             f"--text={test_text}",
-        ] + common_args
+            f"--top_k={args.top_k}",
+        ] + eval_inference_args
         
         if not run_command(inference_cmd, "Inference Test"):
             print("WARNING: Inference test failed.")
