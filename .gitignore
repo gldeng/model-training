@@ -1,0 +1,7 @@
+data
+output
+*.pyc
+*.log
+*.json
+*.csv
+*.jsonl
